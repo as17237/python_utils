@@ -1,26 +1,51 @@
-# List Analysis Utility
+# Python Utilities
 
-A Python utility to analyze and identify duplicate and similar lists in SQL Server databases.
+A collection of useful Python utilities for various tasks.
 
-## Features
+## Project Structure
 
-- Identifies duplicate lists (lists with exactly the same members)
-- Identifies similar lists using a robust similarity algorithm
-- Works with SQL Server databases
+```
+python_utils/
+├── list_analyzer/         # List analysis and comparison utilities
+├── database_utils/        # Database related utilities
+├── file_utils/           # File and directory operations
+├── text_utils/           # Text processing and analysis
+├── cli_utils/            # Command-line interface utilities
+└── tests/                # Test files for all utilities
+```
+
+## Available Utilities
+
+### List Analyzer
+- Identifies duplicate and similar lists in SQL Server databases
 - Configurable similarity threshold
-- Command-line interface for easy use
+- Command-line interface
 
-## Requirements
+### Database Utilities
+- SQL Server connection management
+- Query execution helpers
+- Data export/import tools
 
-- Python 3.6+
-- SQL Server database
-- Required Python packages (see requirements.txt)
+### File Utilities
+- File system operations
+- File format conversion
+- Directory management
+
+### Text Utilities
+- Text processing
+- String manipulation
+- Pattern matching
+
+### CLI Utilities
+- Command-line interface helpers
+- Argument parsing
+- Output formatting
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/python_utils.git
+git clone https://github.com/as17237/python_utils.git
 cd python_utils
 ```
 
@@ -31,33 +56,20 @@ pip install -r requirements.txt
 
 ## Usage
 
-Run the script with your database connection string and attribute_id:
+Each utility module can be used independently. Refer to the specific module's documentation for usage instructions.
 
+### List Analyzer Example
 ```bash
-python list_analyzer.py --connection-string "mssql+pyodbc://username:password@server/database?driver=ODBC+Driver+17+for+SQL+Server" --attribute-id 123
+python -m python_utils.list_analyzer.main --connection-string "mssql+pyodbc://..." --attribute-id 123
 ```
 
-### Arguments
+## Contributing
 
-- `--connection-string`: SQL Server connection string (required)
-- `--attribute-id`: The attribute_id to analyze (required)
-- `--similarity-threshold`: Optional threshold for considering lists similar (default: 0.8)
-
-## Database Schema
-
-The utility works with the following tables:
-
-### list
-- list_id: int
-- version_id: int
-- attribute_id: int
-- name: varchar
-- status: char
-
-### list_member
-- list_id: int
-- version_id: int
-- value: varchar
+1. Fork the repository
+2. Create a new branch for your utility
+3. Add your utility in the appropriate module
+4. Add tests
+5. Submit a pull request
 
 ## License
 

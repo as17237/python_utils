@@ -1,3 +1,20 @@
+# Core dependencies
 pandas>=1.3.0
 sqlalchemy>=1.4.0
-pyodbc>=4.0.30 
+pyodbc>=4.0.30
+
+# CLI utilities
+click>=8.0.0
+rich>=10.0.0
+
+# File utilities
+python-magic>=0.4.24
+watchdog>=2.1.0
+
+# Text utilities
+nltk>=3.6.0
+python-Levenshtein>=0.12.2
+
+# Testing
+pytest>=6.2.0
+pytest-cov>=2.12.0 

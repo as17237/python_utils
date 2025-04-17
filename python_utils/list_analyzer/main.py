@@ -4,10 +4,21 @@ from difflib import SequenceMatcher
 from collections import defaultdict
 import argparse
 from typing import List, Dict, Tuple
+from python_utils.cli_utils.formatter import CLIFormatter
 
 def get_db_connection(connection_string: str):
     """Create a database connection using SQLAlchemy."""
     return create_engine(connection_string)
+
+def get_all_attribute_ids(engine) -> List[int]:
+    """Get all unique attribute_ids from the list table."""
+    query = text("""
+        SELECT DISTINCT attribute_id
+        FROM list
+        WHERE status = 'A'
+        ORDER BY attribute_id
+    """)
+    return [row[0] for row in engine.execute(query).fetchall()]
 
 def get_lists_for_attribute(engine, attribute_id: int) -> pd.DataFrame:
     """Get all active lists for a given attribute_id."""
@@ -84,23 +95,13 @@ def find_similar_lists(lists_df: pd.DataFrame, members_df: pd.DataFrame, thresho
     
     return similar_lists
 
-def main():
-    parser = argparse.ArgumentParser(description='Analyze lists for duplicates and similarities')
-    parser.add_argument('--connection-string', required=True, help='SQL Server connection string')
-    parser.add_argument('--attribute-id', type=int, required=True, help='Attribute ID to analyze')
-    parser.add_argument('--similarity-threshold', type=float, default=0.8, 
-                       help='Similarity threshold (0-1) for considering lists similar')
-    
-    args = parser.parse_args()
-    
-    # Create database connection
-    engine = get_db_connection(args.connection_string)
-    
+def analyze_attribute(engine, attribute_id: int, formatter: CLIFormatter, threshold: float = 0.8):
+    """Analyze lists for a specific attribute_id."""
     # Get lists for the attribute
-    lists_df = get_lists_for_attribute(engine, args.attribute_id)
+    lists_df = get_lists_for_attribute(engine, attribute_id)
     
     if lists_df.empty:
-        print(f"No active lists found for attribute_id {args.attribute_id}")
+        formatter.print_panel(f"No active lists found for attribute_id {attribute_id}", "No Lists")
         return
     
     # Get list members
@@ -109,19 +110,75 @@ def main():
     
     # Find duplicates
     duplicates = find_duplicate_lists(lists_df, members_df)
-    print("\nDuplicate Lists:")
-    for list_id1, list_id2 in duplicates:
-        list1_name = lists_df[lists_df['list_id'] == list_id1]['name'].iloc[0]
-        list2_name = lists_df[lists_df['list_id'] == list_id2]['name'].iloc[0]
-        print(f"List {list_id1} ('{list1_name}') is identical to List {list_id2} ('{list2_name}')")
     
     # Find similar lists
-    similar_lists = find_similar_lists(lists_df, members_df, args.similarity_threshold)
-    print("\nSimilar Lists:")
-    for list_id1, list_id2, similarity in similar_lists:
-        list1_name = lists_df[lists_df['list_id'] == list_id1]['name'].iloc[0]
-        list2_name = lists_df[lists_df['list_id'] == list_id2]['name'].iloc[0]
-        print(f"List {list_id1} ('{list1_name}') is {similarity:.2%} similar to List {list_id2} ('{list2_name}')")
+    similar_lists = find_similar_lists(lists_df, members_df, threshold)
+    
+    # Print results
+    formatter.print_panel(f"Analysis for attribute_id {attribute_id}", "Attribute Analysis")
+    
+    if duplicates:
+        formatter.print_table(
+            ["List ID 1", "List Name 1", "List ID 2", "List Name 2"],
+            [
+                [
+                    list_id1,
+                    lists_df[lists_df['list_id'] == list_id1]['name'].iloc[0],
+                    list_id2,
+                    lists_df[lists_df['list_id'] == list_id2]['name'].iloc[0]
+                ]
+                for list_id1, list_id2 in duplicates
+            ],
+            "Duplicate Lists"
+        )
+    else:
+        formatter.print_success(f"No duplicate lists found for attribute_id {attribute_id}")
+    
+    if similar_lists:
+        formatter.print_table(
+            ["List ID 1", "List Name 1", "List ID 2", "List Name 2", "Similarity"],
+            [
+                [
+                    list_id1,
+                    lists_df[lists_df['list_id'] == list_id1]['name'].iloc[0],
+                    list_id2,
+                    lists_df[lists_df['list_id'] == list_id2]['name'].iloc[0],
+                    f"{similarity:.2%}"
+                ]
+                for list_id1, list_id2, similarity in similar_lists
+            ],
+            "Similar Lists"
+        )
+    else:
+        formatter.print_success(f"No similar lists found for attribute_id {attribute_id}")
+
+def main():
+    parser = argparse.ArgumentParser(description='Analyze lists for duplicates and similarities')
+    parser.add_argument('--connection-string', required=True, help='SQL Server connection string')
+    parser.add_argument('--similarity-threshold', type=float, default=0.8, 
+                       help='Similarity threshold (0-1) for considering lists similar')
+    
+    args = parser.parse_args()
+    
+    # Create database connection and formatter
+    engine = get_db_connection(args.connection_string)
+    formatter = CLIFormatter()
+    
+    # Get all attribute_ids
+    attribute_ids = get_all_attribute_ids(engine)
+    
+    if not attribute_ids:
+        formatter.print_error("No active attribute_ids found in the database")
+        return
+    
+    formatter.print_panel(f"Found {len(attribute_ids)} active attribute_ids", "Attribute Discovery")
+    
+    # Analyze each attribute_id
+    for attribute_id in attribute_ids:
+        analyze_attribute(engine, attribute_id, formatter, args.similarity_threshold)
+    
+    # Close the database connection
+    engine.dispose()
 
 if __name__ == "__main__":
     main() 
